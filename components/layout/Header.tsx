@@ -58,19 +58,20 @@ export function Header() {
             <Link
               key={item.name}
               href={item.href}
-              className="text-sm font-medium text-gray-700 transition-colors hover:text-blue-600"
+              className="relative text-sm font-medium text-gray-700 transition-all duration-300 hover:text-blue-600 group"
             >
               {item.name}
+              <span className="absolute bottom-[-5px] left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
             </Link>
           ))}
         </div>
 
         {/* Auth Buttons - Desktop */}
         <div className="hidden md:flex md:items-center md:space-x-4">
-          <Button variant="ghost" size="sm">
+          <Button size="sm" className="relative bg-blue-600 border-none text-white py-3 px-6 rounded-md cursor-pointer text-sm font-semibold flex items-center gap-2 transition-all duration-300 hover:bg-blue-600 hover:translate-y-[-2px] hover:shadow-[0_0_15px_rgba(37,99,235,0.2),0_0_5px_rgba(37,99,235,0.4)]">
             Sign In
           </Button>
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+          <Button size="sm" className="relative bg-blue-600 border-none text-white py-3 px-6 rounded-md cursor-pointer text-sm font-semibold flex items-center gap-2 transition-all duration-300 hover:bg-blue-600 hover:translate-y-[-2px] hover:shadow-[0_0_15px_rgba(37,99,235,0.2),0_0_5px_rgba(37,99,235,0.4)]">
             Sign Up
           </Button>
         </div>
