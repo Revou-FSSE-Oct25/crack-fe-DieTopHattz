@@ -27,7 +27,7 @@ export const FERRY_CLASSES = [
 // Navigation links
 export const NAVIGATION_LINKS = [
   { name: "Home", href: "/" },
-  { name: "Find Ferries", href: "/search" },
+  { name: "Find Ferries", href: "/booking" },
   { name: "My Bookings", href: "/bookings" },
   { name: "Help", href: "/help" },
 ] as const;

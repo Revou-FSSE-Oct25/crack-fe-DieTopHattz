@@ -33,6 +33,9 @@ export function Header() {
     setIsMenuOpen(false);
   };
 
+
+  console.log("Navigation links:", NAVIGATION_LINKS);
+  
   return (
     <header
       className={`sticky top-0 z-50 w-full transition-all duration-300 ${

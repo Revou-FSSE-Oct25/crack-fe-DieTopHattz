@@ -147,7 +147,7 @@ export default function Home() {
             
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 font-semibold" asChild>
-                <Link href="/routes">Get Started →</Link>
+                <Link href="/booking">Get Started →</Link>
               </Button>
               <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10" asChild>
                 <Link href="#vision">Learn More</Link>
@@ -327,7 +327,7 @@ export default function Home() {
                 ))}
               </div>
               <Button className="mt-8 bg-blue-600 hover:bg-blue-700" asChild>
-                <Link href="/routes">
+                <Link href="/booking">
                   Start Your Journey <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -400,7 +400,7 @@ export default function Home() {
                 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
               </p>
               <Button size="lg" className="mt-6 bg-white text-blue-600 hover:bg-gray-100 font-semibold" asChild>
-                <Link href="/routes">Book Your Ferry Now →</Link>
+                <Link href="/booking">Book Your Ferry Now →</Link>
               </Button>
             </div>
           </div>
