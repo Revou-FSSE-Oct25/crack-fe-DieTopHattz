@@ -2,11 +2,24 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, Ship } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Menu, X, Ship, User, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NAVIGATION_LINKS } from "@/lib/constants";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Header() {
+  const router = useRouter();
+  const { isAuthenticated, user, logout, loading } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -33,14 +46,41 @@ export function Header() {
     setIsMenuOpen(false);
   };
 
+  const handleLogout = () => {
+    logout();
+    router.push("/");
+    setIsMenuOpen(false);
+  };
 
-  console.log("Navigation links:", NAVIGATION_LINKS);
-  
+  const getUserInitials = () => {
+    if (!user?.name) return "U";
+    return user.name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  if (loading) {
+    return (
+      <header className="sticky top-0 z-50 w-full bg-white">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
+          <div className="flex items-center space-x-2">
+            <Ship className="h-6 w-6 text-blue-600" />
+            <span className="text-xl font-bold text-gray-900">FerryGo</span>
+          </div>
+          <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header
       className={`sticky top-0 z-50 w-full transition-all duration-300 ${
         isScrolled
-          ? "bg-white/95 shadow-md backdrop-blur supports-backdrop-filter:bg-white/60"
+          ? "bg-white/95 shadow-md backdrop-blur supports-[backdrop-filter]:bg-white/60"
           : "bg-white"
       }`}
     >
@@ -69,14 +109,58 @@ export function Header() {
           ))}
         </div>
 
-        {/* Auth Buttons - Desktop */}
+        {/* Auth Section - Desktop */}
         <div className="hidden md:flex md:items-center md:space-x-4">
-          <Button size="sm" className="relative bg-blue-600 border-none text-white py-3 px-6 rounded-md cursor-pointer text-sm font-semibold flex items-center gap-2 transition-all duration-300 hover:bg-blue-600 hover:translate-y-[-2px] hover:shadow-[0_0_15px_rgba(37,99,235,0.2),0_0_5px_rgba(37,99,235,0.4)]">
-            Sign In
-          </Button>
-          <Button size="sm" className="relative bg-blue-600 border-none text-white py-3 px-6 rounded-md cursor-pointer text-sm font-semibold flex items-center gap-2 transition-all duration-300 hover:bg-blue-600 hover:translate-y-[-2px] hover:shadow-[0_0_15px_rgba(37,99,235,0.2),0_0_5px_rgba(37,99,235,0.4)]">
-            Sign Up
-          </Button>
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 rounded-full hover:bg-gray-100 transition-colors pl-2 pr-3 py-1">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-blue-100 text-blue-600">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium text-gray-700">
+                    {user?.name?.split(" ")[0] || "User"}
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                </button>
+              </DropdownMenuTrigger>
+              {/* FIXED: Added solid background to dropdown menu */}
+              <DropdownMenuContent 
+                align="end" 
+                className="w-56 bg-white border border-gray-200 shadow-lg rounded-lg"
+              >
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/bookings" className="cursor-pointer">
+                    My Bookings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/login">Sign In</Link>
+              </Button>
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                <Link href="/register">Sign Up</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -85,11 +169,7 @@ export function Header() {
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           aria-label={isMenuOpen ? "Close menu" : "Open menu"}
         >
-          {isMenuOpen ? (
-            <X className="h-6 w-6" />
-          ) : (
-            <Menu className="h-6 w-6" />
-          )}
+          {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </nav>
 
@@ -113,12 +193,53 @@ export function Header() {
                 </Link>
               ))}
               <div className="space-y-3 pt-4">
-                <Button variant="outline" size="lg" className="w-full text-base">
-                  Sign In
-                </Button>
-                <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-base">
-                  Sign Up
-                </Button>
+                {isAuthenticated ? (
+                  <>
+                    <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-blue-100 text-blue-600">
+                          {getUserInitials()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-semibold text-gray-900">{user?.name}</p>
+                        <p className="text-sm text-gray-500">{user?.email}</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="lg" className="w-full text-base" asChild>
+                      <Link href="/bookings" onClick={handleLinkClick}>
+                        My Bookings
+                      </Link>
+                    </Button>
+                    <Button variant="outline" size="lg" className="w-full text-base" asChild>
+                      <Link href="/profile" onClick={handleLinkClick}>
+                        Profile Settings
+                      </Link>
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="lg" 
+                      className="w-full text-base text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" size="lg" className="w-full text-base" asChild>
+                      <Link href="/login" onClick={handleLinkClick}>
+                        Sign In
+                      </Link>
+                    </Button>
+                    <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-white text-base" asChild>
+                      <Link href="/register" onClick={handleLinkClick}>
+                        Sign Up
+                      </Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
