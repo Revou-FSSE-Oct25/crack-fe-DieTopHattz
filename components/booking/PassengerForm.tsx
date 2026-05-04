@@ -263,46 +263,61 @@ export function PassengerForm({ passengerCount, shipType, onSubmit, onBack }: Pa
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Radio Buttons for "Bring Vehicle" Option - Using native radios (they work) */}
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   checked={!hasVehicle}
                   onChange={() => setHasVehicle(false)}
-                  className="h-4 w-4 text-blue-600"
+                  className="h-4 w-4 text-blue-600 accent-blue-600"
                 />
                 <span>No Vehicle</span>
               </label>
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   checked={hasVehicle}
                   onChange={() => setHasVehicle(true)}
-                  className="h-4 w-4 text-blue-600"
+                  className="h-4 w-4 text-blue-600 accent-blue-600"
                 />
                 <span>Bring Vehicle</span>
               </label>
             </div>
-            
+
+            {/* Vehicle Type Selection - Using native radios for consistency */}
             {hasVehicle && (
               <div className="space-y-2">
                 <Label>Vehicle Type</Label>
-                <RadioGroup value={vehicleType} onValueChange={(v) => setVehicleType(v as any)}>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2">
-                      <RadioGroupItem value="motorcycle" />
-                      <span>Motorcycle</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <RadioGroupItem value="car" />
-                      <span>Car</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <RadioGroupItem value="truck" />
-                      <span>Truck</span>
-                    </label>
-                  </div>
-                </RadioGroup>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={vehicleType === 'motorcycle'}
+                      onChange={() => setVehicleType('motorcycle')}
+                      className="h-4 w-4 text-blue-600 accent-blue-600"
+                    />
+                    <span>Motorcycle</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={vehicleType === 'car'}
+                      onChange={() => setVehicleType('car')}
+                      className="h-4 w-4 text-blue-600 accent-blue-600"
+                    />
+                    <span>Car</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={vehicleType === 'truck'}
+                      onChange={() => setVehicleType('truck')}
+                      className="h-4 w-4 text-blue-600 accent-blue-600"
+                    />
+                    <span>Truck</span>
+                  </label>
+                </div>
               </div>
             )}
           </CardContent>

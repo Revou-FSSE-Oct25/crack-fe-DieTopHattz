@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { CreditCard, Building, QrCode, Wallet, Shield, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { ProgressIndicator } from '@/components/booking/ProgressIndicator';
 import { BookingSummarySidebar } from '@/components/booking/BookingSummarySidebar';
@@ -29,8 +28,6 @@ export default function PaymentPage() {
     }
     
     const parsed = JSON.parse(savedBooking);
-    console.log('Loaded booking data:', parsed); // Debug log
-    
     setBookingData(parsed);
     
     const fetchedShip = getShipById(parsed.shipId);
@@ -81,8 +78,8 @@ export default function PaymentPage() {
     );
   }
   
-  // Extract data from bookingData (which now has the correct structure)
-  const className = bookingData?.selectedClass || 'Standard'; // This is now a string!
+  // Extract data from bookingData
+  const className = bookingData?.selectedClass || 'Standard';
   const classPrice = bookingData?.selectedClassPrice || 0;
   const passengerCount = bookingData?.passengers || 1;
   
@@ -90,6 +87,14 @@ export default function PaymentPage() {
   const passengerTotal = classPrice * passengerCount;
   const vehicleFee = bookingData?.vehicle?.hasVehicle ? 100000 : 0;
   const total = passengerTotal + vehicleFee;
+  
+  // Payment methods array for easier mapping
+  const paymentMethods = [
+    { id: 'card', name: 'Credit / Debit Card', icon: CreditCard, description: 'Visa, Mastercard, JCB' },
+    { id: 'bank', name: 'Bank Transfer', icon: Building, description: 'BCA, Mandiri, BRI, BNI' },
+    { id: 'qris', name: 'QRIS', icon: QrCode, description: 'Scan with any payment app' },
+    { id: 'ewallet', name: 'E-Wallet', icon: Wallet, description: 'GoPay, OVO, Dana, LinkAja' },
+  ];
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -124,7 +129,7 @@ export default function PaymentPage() {
               </CardContent>
             </Card>
             
-            {/* Payment Methods */}
+            {/* Payment Methods - Using native radio buttons (same pattern that works) */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -132,90 +137,33 @@ export default function PaymentPage() {
                   Select Payment Method
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
-                  {/* Credit/Debit Card */}
-                  <div
-                    className={`flex items-center justify-between rounded-lg border p-4 cursor-pointer transition-all ${
-                      paymentMethod === 'card' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => setPaymentMethod('card')}
-                  >
-                    <div className="flex items-center gap-3">
-                      <RadioGroupItem value="card" id="card" />
-                      <CreditCard className="h-5 w-5 text-gray-500" />
-                      <Label htmlFor="card" className="font-medium cursor-pointer">
-                        Credit / Debit Card
-                      </Label>
-                    </div>
-                    <div className="flex gap-1">
-                      <span className="text-xs text-gray-500">Visa</span>
-                      <span className="text-xs text-gray-500">Mastercard</span>
-                      <span className="text-xs text-gray-500">JCB</span>
-                    </div>
-                  </div>
-                  
-                  {/* Bank Transfer */}
-                  <div
-                    className={`flex items-center justify-between rounded-lg border p-4 cursor-pointer transition-all ${
-                      paymentMethod === 'bank' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => setPaymentMethod('bank')}
-                  >
-                    <div className="flex items-center gap-3">
-                      <RadioGroupItem value="bank" id="bank" />
-                      <Building className="h-5 w-5 text-gray-500" />
-                      <Label htmlFor="bank" className="font-medium cursor-pointer">
-                        Bank Transfer
-                      </Label>
-                    </div>
-                    <div className="flex gap-1">
-                      <span className="text-xs text-gray-500">BCA</span>
-                      <span className="text-xs text-gray-500">Mandiri</span>
-                      <span className="text-xs text-gray-500">BRI</span>
-                      <span className="text-xs text-gray-500">BNI</span>
-                    </div>
-                  </div>
-                  
-                  {/* QRIS */}
-                  <div
-                    className={`flex items-center justify-between rounded-lg border p-4 cursor-pointer transition-all ${
-                      paymentMethod === 'qris' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => setPaymentMethod('qris')}
-                  >
-                    <div className="flex items-center gap-3">
-                      <RadioGroupItem value="qris" id="qris" />
-                      <QrCode className="h-5 w-5 text-gray-500" />
-                      <Label htmlFor="qris" className="font-medium cursor-pointer">
-                        QRIS
-                      </Label>
-                    </div>
-                    <span className="text-xs text-gray-500">Scan with any payment app</span>
-                  </div>
-                  
-                  {/* E-Wallet */}
-                  <div
-                    className={`flex items-center justify-between rounded-lg border p-4 cursor-pointer transition-all ${
-                      paymentMethod === 'ewallet' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => setPaymentMethod('ewallet')}
-                  >
-                    <div className="flex items-center gap-3">
-                      <RadioGroupItem value="ewallet" id="ewallet" />
-                      <Wallet className="h-5 w-5 text-gray-500" />
-                      <Label htmlFor="ewallet" className="font-medium cursor-pointer">
-                        E-Wallet
-                      </Label>
-                    </div>
-                    <div className="flex gap-1">
-                      <span className="text-xs text-gray-500">GoPay</span>
-                      <span className="text-xs text-gray-500">OVO</span>
-                      <span className="text-xs text-gray-500">Dana</span>
-                      <span className="text-xs text-gray-500">LinkAja</span>
-                    </div>
-                  </div>
-                </RadioGroup>
+              <CardContent className="space-y-3">
+                {paymentMethods.map((method) => {
+                  const Icon = method.icon;
+                  return (
+                    <label
+                      key={method.id}
+                      className={`flex items-center justify-between rounded-lg border p-4 cursor-pointer transition-all ${
+                        paymentMethod === method.id ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          checked={paymentMethod === method.id}
+                          onChange={() => setPaymentMethod(method.id)}
+                          className="h-4 w-4 text-blue-600 accent-blue-600"
+                        />
+                        <Icon className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <span className="font-medium">{method.name}</span>
+                          <p className="text-xs text-gray-500">{method.description}</p>
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
               </CardContent>
             </Card>
             
