@@ -28,15 +28,20 @@ export function LoginForm() {
     setIsLoading(true);
     setError('');
 
-    // Simulate API call - In real app, connect to your backend
+    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Mock validation - In real app, verify with backend
-    if (formData.email === 'user@example.com' && formData.password === 'password') {
-      // Store mock user data
-      login(formData.email, 'John Doe');
+    // Admin login
+    if (formData.email === 'admin@ferrygo.com' && formData.password === 'password') {
+      login(formData.email, 'Admin User', 'admin');
+      router.push('/admin');
+    } 
+    // Regular user login
+    else if (formData.email === 'user@example.com' && formData.password === 'password') {
+      login(formData.email, 'John Doe', 'user');
       router.push('/');
-    } else {
+    } 
+    else {
       setError('Invalid email or password');
     }
 

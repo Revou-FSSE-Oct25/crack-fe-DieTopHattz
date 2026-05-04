@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, X, Ship, User, LogOut, ChevronDown } from "lucide-react";
+import { Menu, X, Ship, User, LogOut, Settings, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NAVIGATION_LINKS } from "@/lib/constants";
 import {
@@ -126,7 +126,6 @@ export function Header() {
                   <ChevronDown className="h-4 w-4 text-gray-500" />
                 </button>
               </DropdownMenuTrigger>
-              {/* FIXED: Added solid background to dropdown menu */}
               <DropdownMenuContent 
                 align="end" 
                 className="w-56 bg-white border border-gray-200 shadow-lg rounded-lg"
@@ -144,6 +143,20 @@ export function Header() {
                     Profile Settings
                   </Link>
                 </DropdownMenuItem>
+                
+                {/* Show Admin Dashboard link only for admin users */}
+                {user?.role === 'admin' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="cursor-pointer">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Admin Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -216,6 +229,14 @@ export function Header() {
                         Profile Settings
                       </Link>
                     </Button>
+                    {user?.role === 'admin' && (
+                      <Button variant="outline" size="lg" className="w-full text-base" asChild>
+                        <Link href="/admin" onClick={handleLinkClick}>
+                          <Settings className="mr-2 h-4 w-4" />
+                          Admin Dashboard
+                        </Link>
+                      </Button>
+                    )}
                     <Button 
                       variant="outline" 
                       size="lg" 

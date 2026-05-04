@@ -2,10 +2,16 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+interface User {
+  name: string;
+  email: string;
+  role: 'user' | 'admin';
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: { name: string; email: string } | null;
-  login: (email: string, name: string) => void;
+  user: User | null;
+  login: (email: string, name: string, role?: 'user' | 'admin') => void;
   logout: () => void;
   loading: boolean;
 }
@@ -14,7 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,10 +29,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const auth = sessionStorage.getItem('isAuthenticated');
       const email = sessionStorage.getItem('userEmail');
       const name = sessionStorage.getItem('userName');
+      const role = sessionStorage.getItem('userRole') as 'user' | 'admin' | null;
       
       setIsAuthenticated(auth === 'true');
       if (email && name) {
-        setUser({ email, name });
+        setUser({ 
+          email, 
+          name, 
+          role: role === 'admin' ? 'admin' : 'user' 
+        });
       } else {
         setUser(null);
       }
@@ -40,18 +51,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', checkAuth);
   }, []);
 
-  const login = (email: string, name: string) => {
+  const login = (email: string, name: string, role: 'user' | 'admin' = 'user') => {
     sessionStorage.setItem('isAuthenticated', 'true');
     sessionStorage.setItem('userEmail', email);
     sessionStorage.setItem('userName', name);
+    sessionStorage.setItem('userRole', role);
     setIsAuthenticated(true);
-    setUser({ email, name });
+    setUser({ email, name, role });
   };
 
   const logout = () => {
     sessionStorage.removeItem('isAuthenticated');
     sessionStorage.removeItem('userEmail');
     sessionStorage.removeItem('userName');
+    sessionStorage.removeItem('userRole');
     setIsAuthenticated(false);
     setUser(null);
   };
