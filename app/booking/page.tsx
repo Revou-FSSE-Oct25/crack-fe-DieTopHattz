@@ -16,7 +16,44 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { ShipCard } from '@/components/booking/ShipCard';
 import { ProgressIndicator } from '@/components/booking/ProgressIndicator';
-import { getShipsByDateAndTypeAndRoute, getUniqueRoutes, ShipClass } from '@/lib/mock-db';
+import { api } from '@/lib/api';
+
+interface Route {
+  from: string;
+  to: string;
+}
+
+interface ShipClass {
+  name: string;
+  price: number;
+  description: string;
+  seats?: number;
+}
+
+interface Ship {
+  id: string;
+  name: string;
+  operator: string;
+  type: string;
+  routeFrom: string;
+  routeTo: string;
+  departureTime: string;
+  availableDates: string[];
+  classes: {
+    economy?: ShipClass;
+    business?: ShipClass;
+    vip?: ShipClass;
+    executive?: ShipClass;
+  };
+  vehicleRates: {
+    motorcycle?: number;
+    car?: number;
+    truck?: number;
+  };
+  amenities: string[];
+  totalSeats: number;
+  active: boolean;
+}
 
 export default function FindFerriesPage() {
   const router = useRouter();
@@ -26,61 +63,110 @@ export default function FindFerriesPage() {
   const [selectedShipType, setSelectedShipType] = useState('all');
   const [selectedRoute, setSelectedRoute] = useState('all');
   const [passengerCount, setPassengerCount] = useState(1);
-  const [routes, setRoutes] = useState<{ from: string; to: string }[]>([]);
-  const [filteredShips, setFilteredShips] = useState<any[]>([]);
+  const [routes, setRoutes] = useState<Route[]>([]);
+  const [filteredShips, setFilteredShips] = useState<Ship[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [loading, setLoading] = useState(false);
   
-  // Progress steps
   const steps = ['Select Ticket', 'Passenger Details', 'Payment'];
   
-  // Load unique routes on component mount
+  // Load available routes on mount
   useEffect(() => {
-    const uniqueRoutes = getUniqueRoutes();
-    setRoutes(uniqueRoutes);
+    const loadRoutes = async () => {
+      try {
+        const routesData = await api.getAvailableRoutes();
+        setRoutes(routesData);
+        console.log('📡 Routes loaded:', routesData);
+      } catch (error) {
+        console.error('Failed to load routes:', error);
+      }
+    };
+    loadRoutes();
   }, []);
   
   // Handle search
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!selectedDate) {
       alert('Please select a departure date');
       return;
     }
     
-    let routeFrom = 'all';
-    let routeTo = '';
+    setLoading(true);
     
-    if (selectedRoute !== 'all') {
-      const selected = routes.find(r => `${r.from}|||${r.to}` === selectedRoute);
-      if (selected) {
-        routeFrom = selected.from;
-        routeTo = selected.to;
+    try {
+      let routeFrom, routeTo;
+      if (selectedRoute !== 'all') {
+        const selected = routes.find(r => `${r.from}|||${r.to}` === selectedRoute);
+        if (selected) {
+          routeFrom = selected.from;
+          routeTo = selected.to;
+        }
       }
+      
+      const searchParams: any = {
+        date: selectedDate,
+      };
+      
+      if (routeFrom && routeFrom !== 'undefined') searchParams.routeFrom = routeFrom;
+      if (routeTo && routeTo !== 'undefined') searchParams.routeTo = routeTo;
+      if (selectedShipType !== 'all' && selectedShipType !== 'undefined') {
+        searchParams.type = selectedShipType;
+      }
+      
+      console.log('🔍 Search params:', searchParams);
+      
+      const ships = await api.searchShips(searchParams);
+      
+      console.log('🚢 Ships found:', ships.length);
+      setFilteredShips(ships);
+      setHasSearched(true);
+    } catch (error) {
+      console.error('Search failed:', error);
+      alert('Failed to search ferries. Please try again.');
+    } finally {
+      setLoading(false);
     }
+  };
+  
+  // Handle class selection - UPDATED WITH DEBUG LOGS
+  const handleSelectClass = async (ship: Ship, selectedClass: ShipClass) => {
+    console.log('🚢 1. handleSelectClass STARTED');
+    console.log('   Ship:', ship.name);
+    console.log('   Class:', selectedClass.name);
+    console.log('   Passenger Count:', passengerCount);
+    console.log('   Date:', selectedDate);
     
-    const ships = getShipsByDateAndTypeAndRoute(
-      selectedDate, 
-      selectedShipType, 
-      routeFrom, 
-      routeTo
-    );
-    setFilteredShips(ships);
-    setHasSearched(true);
+    try {
+      const selection = {
+        shipId: ship.id,
+        shipName: ship.name,
+        operator: ship.operator,
+        routeFrom: ship.routeFrom,
+        routeTo: ship.routeTo,
+        departureTime: ship.departureTime,
+        selectedClass: selectedClass.name,
+        classPrice: selectedClass.price,
+        passengerCount: passengerCount,
+        departureDate: selectedDate,
+      };
+      
+      console.log('💾 2. Saving to sessionStorage:', selection);
+      sessionStorage.setItem('ferrySelection', JSON.stringify(selection));
+      
+      // Verify it was saved
+      const saved = sessionStorage.getItem('ferrySelection');
+      console.log('✅ 3. Verification - saved data:', saved);
+      
+      console.log('🔀 4. About to navigate to /booking/passenger');
+      router.push('/booking/passenger');
+      
+    } catch (error) {
+      console.error('❌ Selection failed:', error);
+      alert('Failed to select ferry. Please try again.');
+    }
   };
   
-  // Handle class selection
-  const handleSelectClass = (shipId: string, selectedClass: ShipClass) => {
-    const selection = {
-      shipId,
-      selectedClass,
-      date: selectedDate,
-      passengers: passengerCount,
-    };
-    sessionStorage.setItem('ferrySelection', JSON.stringify(selection));
-    router.push('/booking/passenger');
-  };
-  
-  // Reset search
-  const handleReset = () => {
+  const resetFilters = () => {
     setSelectedDate('');
     setSelectedShipType('all');
     setSelectedRoute('all');
@@ -89,12 +175,11 @@ export default function FindFerriesPage() {
     setFilteredShips([]);
   };
   
-  // Get today's date for min attribute
   const today = new Date().toISOString().split('T')[0];
   
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Page Header */}
+      {/* Header Section */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-8">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl font-bold mb-2">Find Your Ferry</h1>
@@ -209,15 +294,14 @@ export default function FindFerriesPage() {
               
               {/* Search Button Column */}
               <div className="space-y-2">
-                {/* Invisible label to match other columns' height */}
                 <div className="text-sm font-medium opacity-0">Action</div>
                 <div className="flex gap-2">
-                  <Button onClick={handleSearch} className="flex-1 bg-blue-600 hover:bg-blue-700 h-10">
+                  <Button onClick={handleSearch} disabled={loading} className="flex-1 bg-blue-600 hover:bg-blue-700 h-10">
                     <Filter className="mr-2 h-4 w-4" />
-                    Search
+                    {loading ? 'Searching...' : 'Search'}
                   </Button>
                   {hasSearched && (
-                    <Button onClick={handleReset} variant="outline" className="flex-1 h-10">
+                    <Button onClick={resetFilters} variant="outline" className="flex-1 h-10">
                       Clear
                     </Button>
                   )}
@@ -231,18 +315,21 @@ export default function FindFerriesPage() {
       {/* Results Section */}
       <div className="container mx-auto px-4 py-8">
         {!hasSearched ? (
-          // Empty state
           <div className="text-center py-12">
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 mb-4">
               <CalendarIcon className="h-8 w-8 text-gray-400" />
             </div>
             <h3 className="text-lg font-medium text-gray-700">No search yet</h3>
             <p className="text-gray-500 mt-2">
-              Please select a departure date, route, and search for available ferries
+              Please select a departure date and search for available ferries
             </p>
           </div>
+        ) : loading ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="text-gray-500 mt-2">Searching for ferries...</p>
+          </div>
         ) : filteredShips.length === 0 ? (
-          // No results
           <div className="text-center py-12">
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100 mb-4">
               <CalendarIcon className="h-8 w-8 text-yellow-600" />
@@ -251,12 +338,11 @@ export default function FindFerriesPage() {
             <p className="text-gray-500 mt-2">
               No ferries available for your search criteria. Please try different filters.
             </p>
-            <Button variant="outline" onClick={handleReset} className="mt-4">
+            <Button variant="outline" onClick={resetFilters} className="mt-4">
               Clear Search
             </Button>
           </div>
         ) : (
-          // Results
           <div className="space-y-6">
             <div className="flex justify-between items-center flex-wrap gap-2">
               <h2 className="text-xl font-semibold">
@@ -264,10 +350,10 @@ export default function FindFerriesPage() {
               </h2>
               <div className="flex gap-3 text-sm text-gray-500">
                 {selectedDate && <span>📅 {selectedDate}</span>}
-                {selectedRoute !== 'all' && (
+                {selectedRoute !== 'all' && selectedRoute !== 'undefined' && (
                   <span>📍 {routes.find(r => `${r.from}|||${r.to}` === selectedRoute)?.from} → {routes.find(r => `${r.from}|||${r.to}` === selectedRoute)?.to}</span>
                 )}
-                {selectedShipType !== 'all' && (
+                {selectedShipType !== 'all' && selectedShipType !== 'undefined' && (
                   <span>🚢 {selectedShipType === 'passenger-only' ? 'Passenger Only' : 'Passenger + Vehicle'}</span>
                 )}
                 <span>👥 {passengerCount} passenger{passengerCount !== 1 ? 's' : ''}</span>
@@ -279,7 +365,12 @@ export default function FindFerriesPage() {
                 key={ship.id}
                 ship={ship}
                 passengerCount={passengerCount}
-                onSelectClass={handleSelectClass}
+                onSelectClass={(shipId, selectedClass) => {
+                  const fullShip = filteredShips.find(s => s.id === shipId);
+                  if (fullShip) {
+                    handleSelectClass(fullShip, selectedClass);
+                  }
+                }}
               />
             ))}
           </div>
@@ -288,5 +379,3 @@ export default function FindFerriesPage() {
     </div>
   );
 }
-
-

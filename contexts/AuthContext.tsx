@@ -1,76 +1,98 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { api } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
 interface User {
+  id: string;
   name: string;
   email: string;
-  role: 'user' | 'admin';
+  phone?: string;
+  role: string;
 }
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
-  login: (email: string, name: string, role?: 'user' | 'admin') => void;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string, phone?: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check auth status on mount and when storage changes
-    const checkAuth = () => {
-      const auth = sessionStorage.getItem('isAuthenticated');
-      const email = sessionStorage.getItem('userEmail');
-      const name = sessionStorage.getItem('userName');
-      const role = sessionStorage.getItem('userRole') as 'user' | 'admin' | null;
-      
-      setIsAuthenticated(auth === 'true');
-      if (email && name) {
-        setUser({ 
-          email, 
-          name, 
-          role: role === 'admin' ? 'admin' : 'user' 
-        });
-      } else {
-        setUser(null);
+    const loadUser = async () => {
+      const token = api.getToken();
+      if (token) {
+        try {
+          const profile = await api.getProfile();
+          setIsAuthenticated(true);
+          setUser(profile);
+        } catch (err) {
+          api.clearToken();
+          setIsAuthenticated(false);
+          setUser(null);
+        }
       }
       setLoading(false);
     };
-
-    checkAuth();
-
-    // Listen for storage changes (in case of logout from another tab)
-    window.addEventListener('storage', checkAuth);
-    return () => window.removeEventListener('storage', checkAuth);
+    loadUser();
   }, []);
 
-  const login = (email: string, name: string, role: 'user' | 'admin' = 'user') => {
-    sessionStorage.setItem('isAuthenticated', 'true');
-    sessionStorage.setItem('userEmail', email);
-    sessionStorage.setItem('userName', name);
-    sessionStorage.setItem('userRole', role);
-    setIsAuthenticated(true);
-    setUser({ email, name, role });
+  const login = async (email: string, password: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.login(email, password);
+      setIsAuthenticated(true);
+      setUser(data.user);
+      router.push('/');
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (email: string, password: string, name: string, phone?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.register(email, password, name, phone);
+      setIsAuthenticated(true);
+      setUser(data.user);
+      router.push('/');
+    } catch (err: any) {
+      setError(err.message || 'Registration failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = () => {
-    sessionStorage.removeItem('isAuthenticated');
-    sessionStorage.removeItem('userEmail');
-    sessionStorage.removeItem('userName');
-    sessionStorage.removeItem('userRole');
+    api.logout();
     setIsAuthenticated(false);
     setUser(null);
+    router.push('/');
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{ isAuthenticated, user, login, register, logout, loading, error }}
+    >
       {children}
     </AuthContext.Provider>
   );

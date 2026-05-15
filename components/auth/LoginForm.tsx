@@ -13,10 +13,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export function LoginForm() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, loading, error } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -25,27 +23,11 @@ export function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Admin login
-    if (formData.email === 'admin@ferrygo.com' && formData.password === 'password') {
-      login(formData.email, 'Admin User', 'admin');
-      router.push('/admin');
-    } 
-    // Regular user login
-    else if (formData.email === 'user@example.com' && formData.password === 'password') {
-      login(formData.email, 'John Doe', 'user');
-      router.push('/');
-    } 
-    else {
-      setError('Invalid email or password');
+    try {
+      await login(formData.email, formData.password);
+    } catch (err) {
+      // Error is handled by auth context
     }
-
-    setIsLoading(false);
   };
 
   return (
@@ -128,9 +110,9 @@ export function LoginForm() {
             </a>
           </div>
           
-          <Button type="submit" disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700">
+          <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700">
             <LogIn className="mr-2 h-4 w-4" />
-            {isLoading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </Button>
         </form>
       </CardContent>

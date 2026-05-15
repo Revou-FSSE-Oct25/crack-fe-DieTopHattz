@@ -12,11 +12,10 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export function RegisterForm() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { register, loading, error } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -26,19 +25,19 @@ export function RegisterForm() {
 
   const validateForm = () => {
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setLocalError('Passwords do not match');
       return false;
     }
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setLocalError('Password must be at least 6 characters');
       return false;
     }
     if (!formData.fullName.trim()) {
-      setError('Full name is required');
+      setLocalError('Full name is required');
       return false;
     }
     if (!formData.email.includes('@')) {
-      setError('Please enter a valid email address');
+      setLocalError('Please enter a valid email address');
       return false;
     }
     return true;
@@ -46,23 +45,16 @@ export function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLocalError('');
     if (!validateForm()) return;
     
-    setIsLoading(true);
-    setError('');
-
-    // Simulate API call - In real app, send to backend
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Mock registration - In real app, create user in backend
-    // Then log the user in
-    login(formData.email, formData.fullName);
-    router.push('/');
-
-    setIsLoading(false);
+    try {
+      await register(formData.email, formData.password, formData.fullName, '');
+    } catch (err) {
+      // Error is handled by auth context
+    }
   };
 
-  // Password strength indicator
   const getPasswordStrength = () => {
     const pwd = formData.password;
     if (pwd.length === 0) return null;
@@ -72,6 +64,7 @@ export function RegisterForm() {
   };
 
   const strength = getPasswordStrength();
+  const displayError = localError || error;
 
   return (
     <Card className="border-0 shadow-xl max-w-md mx-auto">
@@ -82,9 +75,9 @@ export function RegisterForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
+        {displayError && (
           <Alert className="mb-4 bg-red-50 border-red-200">
-            <AlertDescription className="text-red-600">{error}</AlertDescription>
+            <AlertDescription className="text-red-600">{displayError}</AlertDescription>
           </Alert>
         )}
         
@@ -180,9 +173,9 @@ export function RegisterForm() {
             </div>
           </div>
           
-          <Button type="submit" disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700">
+          <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700">
             <UserPlus className="mr-2 h-4 w-4" />
-            {isLoading ? 'Creating account...' : 'Create Account'}
+            {loading ? 'Creating account...' : 'Create Account'}
           </Button>
         </form>
       </CardContent>
