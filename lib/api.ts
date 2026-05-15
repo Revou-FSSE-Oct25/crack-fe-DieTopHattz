@@ -30,19 +30,30 @@ class ApiClient {
 
   private async request(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE}${endpoint}`;
-    const headers: HeadersInit = {
+    
+    // Create headers properly
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
     };
 
+    // Add authorization header if token exists
     const token = this.getToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    // Merge with custom headers from options
+    if (options.headers) {
+      const customHeaders = options.headers as Record<string, string>;
+      Object.assign(headers, customHeaders);
+    }
+
     console.log(`📤 API Request: ${options.method || 'GET'} ${url}`);
 
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(url, { 
+      ...options, 
+      headers: headers as HeadersInit 
+    });
 
     console.log(`📥 API Response: ${response.status} ${response.statusText}`);
 
