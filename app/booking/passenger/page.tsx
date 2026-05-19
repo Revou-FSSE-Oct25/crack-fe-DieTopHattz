@@ -147,16 +147,34 @@ export default function PassengerPage() {
       
       const booking = await api.createBooking(bookingData);
       console.log('✅ Booking created:', booking);
+      console.log('✅ Booking ID:', booking?.id);
+      console.log('✅ Booking amount:', booking?.totalAmount);
+      
+      // Verify booking ID exists
+      if (!booking || !booking.id) {
+        throw new Error('Booking creation failed - no ID returned');
+      }
+      
+      // Calculate amount safely
+      const classPrice = ferrySelection?.classPrice || 0;
+      const passengerCount = ferrySelection?.passengerCount || 1;
+      const calculatedAmount = classPrice * passengerCount;
+      const finalAmount = booking.totalAmount || calculatedAmount;
       
       // Store booking ID for payment
       sessionStorage.setItem('currentBookingId', booking.id);
+      sessionStorage.setItem('currentBookingAmount', String(finalAmount));
+      
+      console.log('💾 Stored in sessionStorage - currentBookingId:', sessionStorage.getItem('currentBookingId'));
+      console.log('💾 Stored amount:', sessionStorage.getItem('currentBookingAmount'));
+      console.log('🔀 Redirecting to /booking/payment');
       
       // Navigate to payment page
       router.push('/booking/payment');
+      
     } catch (err: any) {
       console.error('❌ Booking failed:', err);
       setError(err.message || 'Failed to create booking. Please try again.');
-    } finally {
       setSubmitting(false);
     }
   };
@@ -323,7 +341,7 @@ export default function PassengerPage() {
               ))}
             </div>
             
-            {/* Vehicle Selection - FIXED with native radio buttons */}
+            {/* Vehicle Selection */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">

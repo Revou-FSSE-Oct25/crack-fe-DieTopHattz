@@ -2,103 +2,104 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { CreditCard, Building, QrCode, Wallet, Shield, Lock } from 'lucide-react';
+import { CreditCard, Building, QrCode, Wallet, Shield, Lock, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import { ProgressIndicator } from '@/components/booking/ProgressIndicator';
-import { BookingSummarySidebar } from '@/components/booking/BookingSummarySidebar';
-import { getShipById } from '@/lib/mock-db';
+import { api } from '@/lib/api';
 
 export default function PaymentPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [bookingData, setBookingData] = useState<any>(null);
-  const [ship, setShip] = useState<any>(null);
-  const [paymentMethod, setPaymentMethod] = useState('card');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [bookingId, setBookingId] = useState<string | null>(null);
+  const [bookingAmount, setBookingAmount] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState<string>('CREDIT_CARD');
+  const [error, setError] = useState<string>('');
   
   const steps = ['Select Ticket', 'Passenger Details', 'Payment'];
-  
+
   useEffect(() => {
-    const savedBooking = sessionStorage.getItem('bookingData');
-    if (!savedBooking) {
+    console.log('🔍 Payment page loaded');
+    
+    // Get booking ID from sessionStorage
+    const storedBookingId = sessionStorage.getItem('currentBookingId');
+    const storedAmount = sessionStorage.getItem('currentBookingAmount');
+    
+    console.log('📦 Retrieved booking ID:', storedBookingId);
+    console.log('📦 Retrieved amount:', storedAmount);
+    
+    if (!storedBookingId) {
+      console.error('❌ No booking ID found, redirecting to booking');
       router.push('/booking');
       return;
     }
     
-    const parsed = JSON.parse(savedBooking);
-    setBookingData(parsed);
-    
-    const fetchedShip = getShipById(parsed.shipId);
-    if (!fetchedShip) {
-      router.push('/booking');
-      return;
-    }
-    
-    setShip(fetchedShip);
+    setBookingId(storedBookingId);
+    setBookingAmount(storedAmount ? Number(storedAmount) : 0);
     setLoading(false);
   }, [router]);
-  
+
   const handlePayment = async () => {
+    if (!bookingId) {
+      setError('No booking found. Please try again.');
+      return;
+    }
+    
+    if (isProcessing) return; // Prevent multiple clicks
+    
     setIsProcessing(true);
+    setError('');
     
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Generate booking ID
-    const bookingId = `FRY-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    
-    // Save to sessionStorage for success page
-    const confirmationData = {
-      ...bookingData,
-      bookingId,
-      paymentMethod,
-      paymentDate: new Date().toISOString(),
-    };
-    sessionStorage.setItem('bookingConfirmation', JSON.stringify(confirmationData));
-    
-    setIsProcessing(false);
-    
-    // Navigate to success page
-    router.push('/booking/success');
+    try {
+      console.log('💳 Creating payment for booking:', bookingId);
+      console.log('💰 Amount:', bookingAmount);
+      console.log('💳 Method:', paymentMethod);
+      
+      const payment = await api.createPaymentIntent(bookingId, bookingAmount, paymentMethod);
+      console.log('✅ Payment intent created:', payment);
+      
+      // Redirect to Xendit checkout URL
+      if (payment.checkoutUrl) {
+        console.log('🔀 Redirecting to Xendit:', payment.checkoutUrl);
+        window.location.href = payment.checkoutUrl;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+      
+    } catch (err: any) {
+      console.error('❌ Payment failed:', err);
+      setError(err.message || 'Payment failed. Please try again.');
+      setIsProcessing(false);
+    }
   };
-  
+
   const handleBack = () => {
     router.push('/booking/passenger');
   };
-  
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="container mx-auto px-4 text-center">
-          Loading...
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-20 text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Loading payment details...</p>
         </div>
       </div>
     );
   }
-  
-  // Extract data from bookingData
-  const className = bookingData?.selectedClass || 'Standard';
-  const classPrice = bookingData?.selectedClassPrice || 0;
-  const passengerCount = bookingData?.passengers || 1;
-  
-  // Calculate totals
-  const passengerTotal = classPrice * passengerCount;
-  const vehicleFee = bookingData?.vehicle?.hasVehicle ? 100000 : 0;
-  const total = passengerTotal + vehicleFee;
-  
-  // Payment methods array for easier mapping
+
   const paymentMethods = [
-    { id: 'card', name: 'Credit / Debit Card', icon: CreditCard, description: 'Visa, Mastercard, JCB' },
-    { id: 'bank', name: 'Bank Transfer', icon: Building, description: 'BCA, Mandiri, BRI, BNI' },
-    { id: 'qris', name: 'QRIS', icon: QrCode, description: 'Scan with any payment app' },
-    { id: 'ewallet', name: 'E-Wallet', icon: Wallet, description: 'GoPay, OVO, Dana, LinkAja' },
+    { id: 'CREDIT_CARD', name: 'Credit / Debit Card', icon: CreditCard, description: 'Visa, Mastercard, JCB' },
+    { id: 'BANK_TRANSFER', name: 'Bank Transfer', icon: Building, description: 'BCA, Mandiri, BRI, BNI' },
+    { id: 'QRIS', name: 'QRIS', icon: QrCode, description: 'Scan with any payment app' },
+    { id: 'OVO', name: 'OVO', icon: Wallet, description: 'Pay with OVO' },
+    { id: 'DANA', name: 'DANA', icon: Wallet, description: 'Pay with DANA' },
   ];
-  
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Page Header */}
+      {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-8">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl font-bold mb-2">Payment</h1>
@@ -129,7 +130,14 @@ export default function PaymentPage() {
               </CardContent>
             </Card>
             
-            {/* Payment Methods - Using native radio buttons (same pattern that works) */}
+            {/* Error Message */}
+            {error && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                {error}
+              </div>
+            )}
+            
+            {/* Payment Methods */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -140,18 +148,20 @@ export default function PaymentPage() {
               <CardContent className="space-y-3">
                 {paymentMethods.map((method) => {
                   const Icon = method.icon;
+                  const isSelected = paymentMethod === method.id;
                   return (
-                    <label
+                    <div
                       key={method.id}
                       className={`flex items-center justify-between rounded-lg border p-4 cursor-pointer transition-all ${
-                        paymentMethod === method.id ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'
+                        isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
                       }`}
+                      onClick={() => setPaymentMethod(method.id)}
                     >
                       <div className="flex items-center gap-3">
                         <input
                           type="radio"
                           name="paymentMethod"
-                          checked={paymentMethod === method.id}
+                          checked={isSelected}
                           onChange={() => setPaymentMethod(method.id)}
                           className="h-4 w-4 text-blue-600 accent-blue-600"
                         />
@@ -161,7 +171,7 @@ export default function PaymentPage() {
                           <p className="text-xs text-gray-500">{method.description}</p>
                         </div>
                       </div>
-                    </label>
+                    </div>
                   );
                 })}
               </CardContent>
@@ -170,41 +180,42 @@ export default function PaymentPage() {
             {/* Navigation Buttons */}
             <div className="flex gap-4 mt-6">
               <Button variant="outline" onClick={handleBack} className="flex-1">
-                ← Back to Passenger Details
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
               </Button>
               <Button 
                 onClick={handlePayment} 
                 disabled={isProcessing}
                 className="flex-1 bg-green-600 hover:bg-green-700"
               >
-                {isProcessing ? (
-                  <>
-                    <Lock className="mr-2 h-4 w-4 animate-pulse" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Lock className="mr-2 h-4 w-4" />
-                    Pay IDR {total.toLocaleString()}
-                  </>
-                )}
+                <Lock className="mr-2 h-4 w-4" />
+                {isProcessing ? 'Processing...' : `Pay IDR ${bookingAmount.toLocaleString()}`}
               </Button>
             </div>
           </div>
           
           {/* Summary Sidebar */}
-          <div>
-            <BookingSummarySidebar
-              shipName={ship?.name || ''}
-              shipType={ship?.type === 'passenger-vehicle' ? 'Passenger + Vehicle Ferry' : 'Passenger Only Ferry'}
-              routeFrom={ship?.route.from || ''}
-              routeTo={ship?.route.to || ''}
-              departureTime={ship?.departureTime || ''}
-              selectedClassName={className}
-              price={classPrice}
-              passengerCount={passengerCount}
-              vehicleFee={vehicleFee}
-            />
+          <div className="lg:col-span-1">
+            <Card className="sticky top-24">
+              <CardHeader>
+                <CardTitle>Payment Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-500">Booking ID</p>
+                  <p className="font-mono text-sm font-medium">{bookingId}</p>
+                </div>
+                <div className="border-t pt-3">
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Total Payment</span>
+                    <span className="text-blue-600">IDR {bookingAmount.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500 text-center pt-2">
+                  You will be redirected to complete payment
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
