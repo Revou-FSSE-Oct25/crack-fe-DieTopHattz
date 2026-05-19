@@ -11,7 +11,7 @@ import { api } from '@/lib/api';
 export default function PaymentPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [bookingAmount, setBookingAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string>('CREDIT_CARD');
@@ -46,34 +46,31 @@ export default function PaymentPage() {
       return;
     }
     
-    setProcessing(true);
+    if (isProcessing) return; // Prevent multiple clicks
+    
+    setIsProcessing(true);
     setError('');
     
     try {
-      console.log('💳 Creating payment intent for booking:', bookingId);
+      console.log('💳 Creating payment for booking:', bookingId);
       console.log('💰 Amount:', bookingAmount);
       console.log('💳 Method:', paymentMethod);
       
-      // Create payment intent
       const payment = await api.createPaymentIntent(bookingId, bookingAmount, paymentMethod);
       console.log('✅ Payment intent created:', payment);
       
-      // If there's a checkout URL, redirect to Xendit
+      // Redirect to Xendit checkout URL
       if (payment.checkoutUrl) {
-        console.log('🔀 Redirecting to Xendit checkout:', payment.checkoutUrl);
+        console.log('🔀 Redirecting to Xendit:', payment.checkoutUrl);
         window.location.href = payment.checkoutUrl;
-      } else if (payment.paymentId) {
-        // Otherwise go to success page
-        console.log('🔀 Redirecting to success page');
-        router.push(`/booking/success?bookingId=${bookingId}`);
       } else {
-        throw new Error('No checkout URL or payment ID returned');
+        throw new Error('No checkout URL returned');
       }
       
     } catch (err: any) {
       console.error('❌ Payment failed:', err);
       setError(err.message || 'Payment failed. Please try again.');
-      setProcessing(false);
+      setIsProcessing(false);
     }
   };
 
@@ -96,7 +93,8 @@ export default function PaymentPage() {
     { id: 'CREDIT_CARD', name: 'Credit / Debit Card', icon: CreditCard, description: 'Visa, Mastercard, JCB' },
     { id: 'BANK_TRANSFER', name: 'Bank Transfer', icon: Building, description: 'BCA, Mandiri, BRI, BNI' },
     { id: 'QRIS', name: 'QRIS', icon: QrCode, description: 'Scan with any payment app' },
-    { id: 'EWALLET', name: 'E-Wallet', icon: Wallet, description: 'GoPay, OVO, Dana, LinkAja' },
+    { id: 'OVO', name: 'OVO', icon: Wallet, description: 'Pay with OVO' },
+    { id: 'DANA', name: 'DANA', icon: Wallet, description: 'Pay with DANA' },
   ];
 
   return (
@@ -187,11 +185,11 @@ export default function PaymentPage() {
               </Button>
               <Button 
                 onClick={handlePayment} 
-                disabled={processing}
+                disabled={isProcessing}
                 className="flex-1 bg-green-600 hover:bg-green-700"
               >
                 <Lock className="mr-2 h-4 w-4" />
-                {processing ? 'Processing...' : `Pay IDR ${bookingAmount.toLocaleString()}`}
+                {isProcessing ? 'Processing...' : `Pay IDR ${bookingAmount.toLocaleString()}`}
               </Button>
             </div>
           </div>
